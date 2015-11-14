@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items version="2" >
+
+    <item
+        jar="/home/lwong/AndroidStudioProjects/Test2/app/build/intermediates/exploded-aar/com.android.support/support-v4/23.1.0/jars/classes.jar"
+        jumboMode="false"
+        revision="23.0.2"
+        sha1="ddde541c289c8b816a8f8fd6c325d80788c522a6">
+        <dex dex="/home/lwong/AndroidStudioProjects/Test2/app/build/intermediates/pre-dexed/release/classes-b03692fa454b99965e9de4200da1c7ed6a6d2f4d.jar" />
+    </item>
+    <item
+        jar="/home/lwong/AndroidStudioProjects/Test2/app/build/intermediates/exploded-aar/com.android.support/appcompat-v7/23.1.0/jars/classes.jar"
+        jumboMode="false"
+        revision="23.0.2"
+        sha1="57ae0d750ff83f0c738d21720224ac7ea866a094">
+        <dex dex="/home/lwong/AndroidStudioProjects/Test2/app/build/intermediates/pre-dexed/release/classes-43b2ab26dbdd58b0589a4f4629d770dec3daae8f.jar" />
+    </item>
+    <item
+        jar="/home/lwong/AndroidStudioProjects/Test2/app/libs/android-json-rpc-0.3.4.jar"
+        jumboMode="false"
+        revision="23.0.2"
+        sha1="db86455c6ff251638feee177de8dfc741aa5e71d">
+        <dex dex="/home/lwong/AndroidStudioProjects/Test2/app/build/intermediates/pre-dexed/release/android-json-rpc-0.3.4-35ae7297df99f33956dcb3a330b7f755edd40448.jar" />
+    </item>
+    <item
+        jar="/home/lwong/AndroidStudioProjects/Test2/app/build/intermediates/exploded-aar/com.android.support/support-v4/23.1.0/jars/libs/internal_impl-23.1.0.jar"
+        jumboMode="false"
+        revision="23.0.2"
+        sha1="8716243bf04bae8d6c9ca94d27b9a9be7236f0a3">
+        <dex dex="/home/lwong/AndroidStudioProjects/Test2/app/build/intermediates/pre-dexed/release/internal_impl-23.1.0-c00095a150c25ac187f17334bb1b7edabfbe4fb9.jar" />
+    </item>
+    <item
+        jar="/home/lwong/Android/Sdk/extras/android/m2repository/com/android/support/support-annotations/23.1.0/support-annotations-23.1.0.jar"
+        jumboMode="false"
+        revision="23.0.2"
+        sha1="92e3fc113ec3ee36b64603a38857b95700025633">
+        <dex dex="/home/lwong/AndroidStudioProjects/Test2/app/build/intermediates/pre-dexed/release/support-annotations-23.1.0-0d55dae811894acec9da7fdef4cf25edc4c4cd83.jar" />
+    </item>
+
+</items>
