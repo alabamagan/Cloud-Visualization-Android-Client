@@ -19,23 +19,47 @@ import android.util.Log;
 import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 
 import org.alexd.jsonrpc.JSONRPCClient;
 import org.alexd.jsonrpc.JSONRPCException;
 import org.alexd.jsonrpc.JSONRPCParams;
-import org.json.JSONObject;
 
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+
 
 public class MainActivity extends Activity {
     protected Bitmap displaying;
     protected int displayHeight;
     protected int displayWidth;
-    protected Bitmap displayingOld;
+    protected int displayID;
+    protected Double resolutionFactor = 3.0;
+    protected String serverURL = "http://192.168.43.30:43876";
+    protected ImageView imView;
+    protected ListView listView;
+    private final String[] itemsList = new String[] {"MRI (low resolution)", "MRI (high resolution", "DTI", "Surface"};
+
+    /**
+     * Build the dimension string for the rpc caller
+     *
+     * e.g. DimensionBuilder(10,20) returns (String) "[10,20]"
+     *
+     * @param Width    (int)
+     * @param Height   (int)
+     * @return (String)
+     */
+    private String DimensionBuilder(int Width, int Height) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        sb.append((int) (Width/resolutionFactor));
+        sb.append(",");
+        sb.append((int) (Height/resolutionFactor));
+        sb.append("]");
+        String Dimension = sb.toString();
+        return Dimension;
+    }
 
     private class RequestConnectionVolumeRendering extends AsyncTask<String, Void, String> {
         @Override
@@ -45,13 +69,7 @@ public class MainActivity extends Activity {
             client.setSoTimeout(2000);
             try
             {
-                StringBuilder sb = new StringBuilder();
-                sb.append("[");
-                sb.append(256);
-                sb.append(",");
-                sb.append(256);
-                sb.append("]");
-                String Dimension = sb.toString();
+                String Dimension = DimensionBuilder(displayWidth, displayHeight);
                 String results = (String) client.call("Visualize", "VolumeRendering", "None", Params[1], 1, 1, Dimension, 1234);
                 byte[] b = Base64.decode(results.toString(), 0);
                 Bitmap bMap = BitmapFactory.decodeByteArray(b, 0, b.length);
@@ -64,14 +82,7 @@ public class MainActivity extends Activity {
             }
             return null;
         }
-
-        protected void onPostExecute() {
-
-        }
-
-
-
-    }
+   }
 
     private class RequestConnectionRotate extends AsyncTask<String, Void, String> {
         @Override
@@ -81,18 +92,11 @@ public class MainActivity extends Activity {
             client.setSoTimeout(2000);
             try
             {
-                // todo: remove the clumsy string builder
-                StringBuilder sb = new StringBuilder();
-                sb.append("[");
-                sb.append(400);
-                sb.append(",");
-                sb.append(400);
-                sb.append("]");
-                String Dimension = sb.toString();
+                String Dimension = DimensionBuilder(displayWidth, displayHeight);
                 String results = (String) client.call("Visualize", "Rotation", "[5,5]", 1, 1, 1, Dimension, 1234);
                 byte[] b = Base64.decode(results.toString(), 0);
                 Bitmap bMap = BitmapFactory.decodeByteArray(b, 0, b.length);
-                displaying = bMap;
+                displaying = bMap; // because thread cannot interacts with UI
                 return results;
             }
             catch (JSONRPCException e) {
@@ -107,113 +111,65 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-
     }
 
-//    public void onClickButtonGo(View view) {
-//        Intent intent = new Intent(this, ViewPort.class);
-//        startActivities
+
+    /**
+     * A set of onclick handler that calls the ViewPort activity with different items shown according
+     * to the Bundle b "key" passed to the intent. A list of id corresponding to data type is made
+     * below:
+     *  1. MRI1 (lowres nii)
+     *  2. MRI2 (highres nii)
+     *  3. DTI (vtk)
+     *  4. ...
+     *
+     */
+    // TODO: Write out the connection manager
+    public void onClickButtonMRI1(View view) {
+        Bundle b = new Bundle();
+        b.putInt("key", 1); // 1
+        Intent intent = new Intent(this, ViewPort.class);
+        intent.putExtras(b);
+        startActivity(intent);
+//        displayHeight = imView.getHeight();
+//        displayWidth = imView.getWidth();
+////        Display display = getWindowManager().getDefaultDisplay();
+////        Point size = new Point();
+////        display.getRealSize(size);
+////        displayHeight = size.y;
+////        displayWidth = size.x;
 //
-//
-//    }
-
-    public void onClickButtonGo(View view) {
-//        Intent intent = new Intent(this, ViewPort.class);
-//        startActivity(intent);
-        ImageView imView = (ImageView) findViewById(R.id.imageView);
-        Display display = getWindowManager().getDefaultDisplay();
-        Point size = new Point();
-        display.getRealSize(size);
-        displayHeight = size.y;
-        displayWidth = size.x;
-
-        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-        if (networkInfo != null && networkInfo.isConnected()) {
-            RequestConnectionVolumeRendering rc = new RequestConnectionVolumeRendering();
-            rc.execute("http://137.189.141.230:43876","MNI152_T1_1mm.nii.gz");
-        }
-        while (displaying == null) {
-
-        }
-        displayingOld = displaying;
-        imView.setImageBitmap(displaying);
-    }
-
-    public void onClickButtonDTITest(View vew) {
-        ImageView imView = (ImageView) findViewById(R.id.imageView);
-        Display display = getWindowManager().getDefaultDisplay();
-        Point size = new Point();
-        display.getRealSize(size);
-        displayHeight = size.y;
-        displayWidth = size.x;
-
-        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-        if (networkInfo != null && networkInfo.isConnected()) {
-            RequestConnectionVolumeRendering rc = new RequestConnectionVolumeRendering();
-            rc.execute("http://137.189.141.230:43876","tract.vtk");
-        }
-        while (displaying == null) {
-
-        }
-        displayingOld = displaying;
-        imView.setImageBitmap(displaying);
-    }
-
-    public void onClickButtonRotate(View view) {
-        ImageView imView = (ImageView) findViewById(R.id.imageView);
-        Display display = getWindowManager().getDefaultDisplay();
-        Point size = new Point();
-        display.getRealSize(size);
-        displayHeight = size.y;
-        displayWidth = size.x;
-        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-        if (networkInfo != null && networkInfo.isConnected()) {
-            RequestConnectionRotate rc = new RequestConnectionRotate();
-            rc.execute("http://137.189.141.230:43876", "[10,10]");
-        }
-        imView.setImageBitmap(displaying);
-    }
-
-    private final float TOUCH_SCALE_FACTOR = 180.0f / 320;
-    private float mPreviousX;
-    private float mPreviousY;
-
-//    @Override
-//    public boolean onTouchEvent(MotionEvent e) {
-//        // MotionEvent reports input details from the touch screen
-//        // and other input controls. In this case, you are only
-//        // interested in events where the touch position changed.
-//
-//        float x = e.getX();
-//        float y = e.getY();
-//
-//        switch (e.getAction()) {
-//            case MotionEvent.ACTION_MOVE:
-//
-//                float dx = x - mPreviousX;
-//                float dy = y - mPreviousY;
-//
-////                // reverse direction of rotation above the mid-line
-////                if (y > getHeight() / 2) {
-////                    dx = dx * -1 ;
-////                }
-////
-////                // reverse direction of rotation to left of the mid-line
-////                if (x < getWidth() / 2) {
-////                    dy = dy * -1 ;
-////                }
-//
-//
+//        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+//        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+//        if (networkInfo != null && networkInfo.isConnected()) {
+//            RequestConnectionVolumeRendering rc = new RequestConnectionVolumeRendering();
+//            rc.execute(serverURL,"MNI152_T1_1mm.nii.gz");
+//            while(displaying==imView.getDrawingCache()){}
+//            imView.setImageBitmap(displaying);
 //        }
-//
-//        mPreviousX = x;
-//        mPreviousY = y;
-//        return true;
-//    }
+//        else {
+//            Log.d("DEBUG", "onClickButtonGo() called with: " + "Failed Network");
+//            return;
+//        }
+    }
+
+    public void onClickButtonMRI2(View view) {
+        Bundle b = new Bundle();
+        b.putInt("key", 2); // 1
+        Intent intent = new Intent(this, ViewPort.class);
+        intent.putExtras(b);
+        startActivity(intent);
+    }
+
+    public void onClickButtonDTI(View vew) {
+        Bundle b = new Bundle();
+        b.putInt("key", 3); // 1
+        Intent intent = new Intent(this, ViewPort.class);
+        intent.putExtras(b);
+        startActivity(intent);
+    }
+
+
 
 
 }

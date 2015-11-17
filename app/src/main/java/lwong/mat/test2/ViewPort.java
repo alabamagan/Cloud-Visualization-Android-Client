@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Point;
@@ -22,11 +23,16 @@ import android.view.MenuItem;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.support.v4.app.NavUtils;
 import android.widget.ImageView;
+import android.widget.ZoomControls;
 
 import org.alexd.jsonrpc.JSONRPCClient;
 import org.alexd.jsonrpc.JSONRPCException;
 import org.alexd.jsonrpc.JSONRPCParams;
-import java.lang.Object.*;
+
+/**
+ * TODO: Destroy this intent if back button is pressed
+ * */
+
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
  * status bar and navigation/system bar) with user interaction.
@@ -55,11 +61,27 @@ public class ViewPort extends Activity {
 
     private View mContentView;
     private View mControlsView;
+    private ImageView imView;
     private boolean mVisible;
     protected Bitmap displaying;
     protected Bitmap displayingOld;
     protected int displayHeight;
     protected int displayWidth;
+    protected int zoomLevel = 0;
+    protected double resolutionFactor = 2.0;
+    private String serverURL = "http://192.168.43.30:43876";
+
+
+    private String DimensionBuilder(int Width, int Height) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        sb.append(Width/resolutionFactor);
+        sb.append(",");
+        sb.append(Height/resolutionFactor);
+        sb.append("]");
+        String Dimension = sb.toString();
+        return Dimension;
+    }
 
     private class RequestConnectionRotate extends AsyncTask<String, Void, String> {
         @Override
@@ -69,14 +91,7 @@ public class ViewPort extends Activity {
             client.setSoTimeout(2000);
             try
             {
-                // todo: remove the clumsy string builder
-                StringBuilder sb = new StringBuilder();
-                sb.append("[");
-                sb.append(displayWidth/2);
-                sb.append(",");
-                sb.append(displayHeight/2);
-                sb.append("]");
-                String Dimension = sb.toString();
+                String Dimension = DimensionBuilder(displayWidth, displayHeight);
                 String results = (String) client.call("Visualize", "Rotation", Params[1], 1, 1, 1, Dimension, 1234);
                 byte[] b = Base64.decode(results.toString(), 0);
                 Bitmap bMap = BitmapFactory.decodeByteArray(b, 0, b.length);
@@ -89,7 +104,14 @@ public class ViewPort extends Activity {
             }
             return null;
         }
+
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            imView.setImageBitmap(displaying);
+        }
     }
+
     private class RequestConnectionVolumeRendering extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... Params) {
@@ -98,13 +120,7 @@ public class ViewPort extends Activity {
             client.setSoTimeout(2000);
             try
             {
-                StringBuilder sb = new StringBuilder();
-                sb.append("[");
-                sb.append(displayWidth/2);
-                sb.append(",");
-                sb.append(displayHeight/2);
-                sb.append("]");
-                String Dimension = sb.toString();
+                String Dimension = DimensionBuilder(displayWidth, displayHeight);
                 String results = (String) client.call("Visualize", "VolumeRendering", "None", Params[1], 1, 1, Dimension, 1234);
                 byte[] b = Base64.decode(results.toString(), 0);
                 Bitmap bMap = BitmapFactory.decodeByteArray(b, 0, b.length);
@@ -118,12 +134,39 @@ public class ViewPort extends Activity {
             return null;
         }
 
-        protected void onPostExecute() {
+        @Override
+        protected void onProgressUpdate(Void... values) {
+            super.onProgressUpdate(values);
+            imView.setImageBitmap(displaying);
+        }
+    }
 
+    private class RequestConnectionZoom extends AsyncTask<String, Void, String> {
+        @Override
+        protected String doInBackground(String... Params) {
+            JSONRPCClient client = JSONRPCClient.create(Params[0], JSONRPCParams.Versions.VERSION_2);
+            client.setConnectionTimeout(3000);
+            client.setSoTimeout(2000);
+            try
+            {
+                String Dimension = DimensionBuilder(displayWidth, displayHeight);
+                String results = (String) client.call("Visualize", "Zoom", Params[1], 1, 1, 1, Dimension, 1234);
+                byte[] b = Base64.decode(results.toString(), 0);
+                Bitmap bMap = BitmapFactory.decodeByteArray(b, 0, b.length);
+                displaying = bMap;
+                return results;
+            }
+            catch (JSONRPCException e) {
+                e.printStackTrace();
+            }
+            return null;
         }
 
-
-
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            imView.setImageBitmap(displaying);
+        }
     }
 
     private class SingleTapConfirm extends SimpleOnGestureListener {
@@ -131,6 +174,32 @@ public class ViewPort extends Activity {
         public boolean onSingleTapConfirmed(MotionEvent event) {
             return true;
         }
+    }
+
+    private void DisplayInitial(int ID) {
+        String filename = "tract.vtk";
+        switch(ID) {
+            case 1:
+                filename = "pre_t2_brain_50p.nii";
+                break;
+            case 2:
+                filename = "MNI152_T1_1mm.nii.gz";
+                break;
+            case 3:
+                filename = "tract5000.vtk";
+                break;
+            case 4:
+                filename = "tract.vtk";
+
+        }
+        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+        if (networkInfo != null && networkInfo.isConnected()) {
+            RequestConnectionVolumeRendering rc = new RequestConnectionVolumeRendering();
+            rc.execute(serverURL, filename);
+        }
+        while(displaying == null) {}
+        imView.setImageBitmap(displaying);
     }
 
     @Override
@@ -147,24 +216,17 @@ public class ViewPort extends Activity {
 
 
         // Display initial image
-        ImageView imView = (ImageView) findViewById(R.id.imageView2);
+        imView = (ImageView) findViewById(R.id.imageView2);
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
         display.getRealSize(size);
         displayHeight = size.y;
         displayWidth = size.x;
+        Intent thisintent = getIntent();
+        Bundle b = thisintent.getExtras();
+        int ID = b.getInt("key");
+        DisplayInitial(ID);
 
-        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-        if (networkInfo != null && networkInfo.isConnected()) {
-            RequestConnectionVolumeRendering rc = new RequestConnectionVolumeRendering();
-            rc.execute("http://137.189.141.230:43876","pre_t2_brain_50p.nii");
-        }
-        while (displaying == null) {
-
-        }
-        displayingOld = displaying;
-        imView.setImageBitmap(displaying);
 
         // gesture controls
         gestureDetector = new GestureDetector(this, new SingleTapConfirm());
@@ -173,7 +235,6 @@ public class ViewPort extends Activity {
         mVisible = true;
         mControlsView = findViewById(R.id.fullscreen_content_controls);
         mContentView = findViewById(R.id.imageView2);
-//        mContentView.setOnDragListener(mRotationListener);
 
         // Set up the user interaction to manually show or hide the system UI.
         mContentView.setOnClickListener(new View.OnClickListener() {
@@ -182,78 +243,49 @@ public class ViewPort extends Activity {
                 toggle();
             }
         });
-        mContentView.setOnTouchListener(new View.OnTouchListener() {
+        mContentView.setOnTouchListener(mRotateTouchListener);
+
+        /**
+         * Zoom controls, the zoom steps are defined on the server side
+         */
+        final ZoomControls zc = (ZoomControls) findViewById(R.id.zoomControls);
+        zc.setOnZoomInClickListener(new View.OnClickListener() {
             @Override
-            public boolean onTouch(View v, MotionEvent e) {
-                boolean t = gestureDetector.onTouchEvent(e);
-                if (t) {
-                    toggle();
-                    return true;
-                }
-                else {
-                    final int action = e.getAction();
-
-                    float dx;
-                    float dy;
-                    switch (action) {
-                        case MotionEvent.ACTION_DOWN:
-                            mPreviousX = e.getX();
-                            mPreviousY = e.getY();
-                            break;
-
-                        case MotionEvent.ACTION_UP:
-                            dx = e.getX() - mPreviousX;
-                            dy = e.getY() - mPreviousY;
-
-                            if (dx*dx < 0.5 && dy*dx < 0.5) {
-                                return false;
-                            }
-                            else {
-                                ImageView imView = (ImageView) findViewById(R.id.imageView2);
-                                Display display = getWindowManager().getDefaultDisplay();
-                                Point size = new Point();
-                                display.getRealSize(size);
-                                displayHeight = size.y;
-                                displayWidth = size.x;
-
-                                StringBuilder sb = new StringBuilder();
-                                sb.append("[");
-                                sb.append(-dx / 12.);
-                                sb.append(",");
-                                sb.append(dy / 12.);
-                                sb.append("]");
-                                String Rotate = sb.toString();
-
-                                ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-                                NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-                                if (networkInfo != null && networkInfo.isConnected()) {
-                                    RequestConnectionRotate rc = new RequestConnectionRotate();
-                                    rc.execute(Rotate);
-                                }
-                                while (displaying == displayingOld) {
-                                    try {
-                                        Thread.sleep(5);
-                                    } catch (InterruptedException error) {
-                                        error.printStackTrace();
-                                        break;
-                                    }
-                                }
-                                imView.setImageBitmap(displaying);
-                                return true;
-                            }
+            public void onClick(View v) {
+                ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+                NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+                if (networkInfo != null && networkInfo.isConnected()) {
+                    RequestConnectionZoom rc = new RequestConnectionZoom();
+                    rc.execute(serverURL, "True");
+                    zoomLevel += 1;
+                    if (zoomLevel >= 7) {
+                        zc.setIsZoomInEnabled(false);
+                    }else {
+                        zc.setIsZoomInEnabled(true);
                     }
-
+                    zc.setIsZoomOutEnabled(true);
                 }
-                return false;
             }
         });
+        zc.setOnZoomOutClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+                NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+                if (networkInfo != null && networkInfo.isConnected()) {
+                    RequestConnectionZoom rc = new RequestConnectionZoom();
+                    rc.execute(serverURL, "False");
+                    zoomLevel -= 1;
+                    if (zoomLevel <= -3) {
+                        zc.setIsZoomOutEnabled(false);
+                    }else {
+                        zc.setIsZoomOutEnabled(true);
+                    }
+                    zc.setIsZoomInEnabled(true);
 
-        // Upon interacting with UI controls, delay any scheduled hide()
-        // operations to prevent the jarring behavior of controls going away
-        // while interacting with the UI.
-        findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
-
-
+                }
+            }
+        });
     }
 
 
@@ -299,6 +331,61 @@ public class ViewPort extends Activity {
             return true;
         }
     };
+
+    /**
+     * Touch Listener which listen for rotation and click request. Response by updating a rotation
+     * scene or hide/show the interface.
+     *
+     */
+    private final View.OnTouchListener mRotateTouchListener = new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View v, MotionEvent e) {
+            final int action = e.getAction();
+            float dx;
+            float dy;
+            switch (action) {
+                case MotionEvent.ACTION_DOWN:
+                    mPreviousX = e.getX();
+                    mPreviousY = e.getY();
+                    break;
+
+                case MotionEvent.ACTION_UP:
+                    dx = e.getX() - mPreviousX;
+                    dy = e.getY() - mPreviousY;
+
+                    if (dx * dx < 5 && dy * dx < 5) {
+                        return false;
+                    } else {
+                        ImageView imView = (ImageView) findViewById(R.id.imageView2);
+                        Display display = getWindowManager().getDefaultDisplay();
+                        Point size = new Point();
+                        display.getRealSize(size);
+                        displayHeight = size.y;
+                        displayWidth = size.x;
+
+                        // TODO: Remove this String builder
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("[");
+                        sb.append(-dx / 12.);
+                        sb.append(",");
+                        sb.append(dy / 12.);
+                        sb.append("]");
+                        String Rotate = sb.toString();
+
+                        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+                        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+                        if (networkInfo != null && networkInfo.isConnected()) {
+                            RequestConnectionRotate rc = new RequestConnectionRotate();
+                            rc.execute(serverURL, Rotate);
+                        }
+//                        imView.setImageBitmap(displaying);
+                        return true;
+                    }
+            }
+            return false;
+        }
+    };
+
 
 //    private final View.OnDragListener mRotationListener = new View.OnDragListener() {
 //        float initialX;
