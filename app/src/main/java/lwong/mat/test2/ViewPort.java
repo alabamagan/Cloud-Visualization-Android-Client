@@ -64,13 +64,21 @@ public class ViewPort extends Activity {
     private ImageView imView;
     private boolean mVisible;
     protected Bitmap displaying;
-    protected Bitmap displayingOld;
     protected int displayHeight;
     protected int displayWidth;
     protected int zoomLevel = 0;
     protected double resolutionFactor = 2.0;
-    private String serverURL = "http://192.168.43.30:43876";
+    private String serverURL = "http://137.189.141.216:43875";
+    JSONRPCClient client;
 
+
+    /**
+     *  TODO: Implement decompression method
+     * @return
+     */
+//    private String Decompress(String instr) {
+//
+//    }
 
     private String DimensionBuilder(int Width, int Height) {
         StringBuilder sb = new StringBuilder();
@@ -86,9 +94,6 @@ public class ViewPort extends Activity {
     private class RequestConnectionRotate extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... Params) {
-            JSONRPCClient client = JSONRPCClient.create(Params[0], JSONRPCParams.Versions.VERSION_2);
-            client.setConnectionTimeout(3000);
-            client.setSoTimeout(2000);
             try
             {
                 String Dimension = DimensionBuilder(displayWidth, displayHeight);
@@ -115,9 +120,6 @@ public class ViewPort extends Activity {
     private class RequestConnectionVolumeRendering extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... Params) {
-            JSONRPCClient client = JSONRPCClient.create(Params[0], JSONRPCParams.Versions.VERSION_2);
-            client.setConnectionTimeout(3000);
-            client.setSoTimeout(2000);
             try
             {
                 String Dimension = DimensionBuilder(displayWidth, displayHeight);
@@ -135,8 +137,7 @@ public class ViewPort extends Activity {
         }
 
         @Override
-        protected void onProgressUpdate(Void... values) {
-            super.onProgressUpdate(values);
+        protected void onPostExecute(String s) {
             imView.setImageBitmap(displaying);
         }
     }
@@ -144,13 +145,11 @@ public class ViewPort extends Activity {
     private class RequestConnectionZoom extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... Params) {
-            JSONRPCClient client = JSONRPCClient.create(Params[0], JSONRPCParams.Versions.VERSION_2);
-            client.setConnectionTimeout(3000);
-            client.setSoTimeout(2000);
             try
             {
                 String Dimension = DimensionBuilder(displayWidth, displayHeight);
                 String results = (String) client.call("Visualize", "Zoom", Params[1], 1, 1, 1, Dimension, 1234);
+
                 byte[] b = Base64.decode(results.toString(), 0);
                 Bitmap bMap = BitmapFactory.decodeByteArray(b, 0, b.length);
                 displaying = bMap;
@@ -164,7 +163,6 @@ public class ViewPort extends Activity {
 
         @Override
         protected void onPostExecute(String s) {
-            super.onPostExecute(s);
             imView.setImageBitmap(displaying);
         }
     }
@@ -190,6 +188,9 @@ public class ViewPort extends Activity {
                 break;
             case 4:
                 filename = "tract.vtk";
+                break;
+            case 5:
+                filename = "cta_output.DICOM";
 
         }
         ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -198,8 +199,6 @@ public class ViewPort extends Activity {
             RequestConnectionVolumeRendering rc = new RequestConnectionVolumeRendering();
             rc.execute(serverURL, filename);
         }
-        while(displaying == null) {}
-        imView.setImageBitmap(displaying);
     }
 
     @Override
@@ -214,6 +213,9 @@ public class ViewPort extends Activity {
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
 
+        client = JSONRPCClient.create(serverURL, JSONRPCParams.Versions.VERSION_2);
+        client.setConnectionTimeout(9000);
+        client.setSoTimeout(8000);
 
         // Display initial image
         imView = (ImageView) findViewById(R.id.imageView2);
@@ -311,6 +313,16 @@ public class ViewPort extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    public void onBackPressed() {
+        finish();
+        return;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+    }
 
     private final float TOUCH_SCALE_FACTOR = 180.0f / 320;
     private float mPreviousX;
@@ -568,6 +580,7 @@ public class ViewPort extends Activity {
             mControlsView.setVisibility(View.VISIBLE);
         }
     };
+
 
     private final Handler mHideHandler = new Handler();
     private final Runnable mHideRunnable = new Runnable() {

@@ -12,7 +12,7 @@
     <Button
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="MRI 1 Demo"
+        android:text="MRI 1 Demo (low res)"
         android:onClick="onClickButtonMRI1"
         android:id="@+id/buttonMRI1"
         android:layout_gravity="center_horizontal"
@@ -22,7 +22,7 @@
     <Button
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="MRI 2 Demo"
+        android:text="MRI 2 Demo (high res)"
         android:onClick="onClickButtonMRI2"
         android:id="@+id/buttonMRI2"
         android:visibility="visible"
@@ -32,11 +32,21 @@
     <Button
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="DTI Demo"
+        android:text="DTI Demo (5000 tracts)"
         android:onClick="onClickButtonDTI"
         android:id="@+id/buttonDTI"
         android:visibility="visible"
         android:layout_below="@+id/buttonMRI2"
         android:layout_alignParentStart="true" />
+
+    <Button
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="DICOM Demo (247 slices)"
+        android:onClick="onClickButtonDICOM"
+        android:id="@+id/button"
+        android:visibility="visible"
+        android:layout_below="@+id/buttonDTI"
+        android:layout_centerHorizontal="true" />
 
 </RelativeLayout>

@@ -161,7 +161,7 @@ public class MainActivity extends Activity {
         startActivity(intent);
     }
 
-    public void onClickButtonDTI(View vew) {
+    public void onClickButtonDTI(View view) {
         Bundle b = new Bundle();
         b.putInt("key", 3); // 1
         Intent intent = new Intent(this, ViewPort.class);
@@ -169,6 +169,13 @@ public class MainActivity extends Activity {
         startActivity(intent);
     }
 
+    public void onClickButtonDICOM(View view) {
+        Bundle b = new Bundle();
+        b.putInt("key", 5); // 1
+        Intent intent = new Intent(this, ViewPort.class);
+        intent.putExtras(b);
+        startActivity(intent);
+    }
 
 
 
